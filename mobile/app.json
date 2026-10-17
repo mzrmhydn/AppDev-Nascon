@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "NaSCon League",
+    "slug": "nascon-league",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "nascon",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.nascon.league",
+      "adaptiveIcon": {
+        "backgroundColor": "#B8482A",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-splash-screen", { "backgroundColor": "#FFFFFF", "image": "./assets/images/splash-icon.png", "imageWidth": 76 }],
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-sharing",
+      ["expo-build-properties", { "android": { "usesCleartextTraffic": true, "minSdkVersion": 29 } }]
+    ],
+    "experiments": { "typedRoutes": false, "reactCompiler": true }
+  }
+}
