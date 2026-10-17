@@ -8,8 +8,9 @@ from app import models  # noqa: F401  (registers every table on Base.metadata)
 from app import config
 from app.db import Base, SessionLocal, engine
 from app.errors import install_error_handlers
-from app.middleware import BodySizeLimit
-from app.routes import audit_reset, health
+from app.middleware import BodySizeLimit, RateLimit, limiter
+from app.routes import api_auth, audit_rbac, audit_reset, health
+from app.routes import audit_events, audit_fixtures, audit_leagues, audit_sports, audit_standings
 from app.seed import is_seeded, reset_baseline
 
 logging.basicConfig(level=logging.INFO)
@@ -32,9 +33,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NaSCon'26 League Platform", lifespan=lifespan)
 app.add_middleware(BodySizeLimit)
+app.add_middleware(RateLimit)
+audit_reset.RESET_HOOKS.append(limiter.clear)
 install_error_handlers(app)
 
 # Track A routers
 app.include_router(health.router)
 app.include_router(audit_reset.router)
+app.include_router(audit_rbac.router)
+app.include_router(api_auth.router)
 # Track B routers (added when each one is committed)
+app.include_router(audit_sports.router)
+app.include_router(audit_events.router)
+app.include_router(audit_leagues.router)
+app.include_router(audit_standings.router)
+app.include_router(audit_fixtures.router)
