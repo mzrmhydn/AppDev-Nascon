@@ -122,7 +122,8 @@ def validate_sport_config(body):
     if not _overtime_ok(body.get("overtime")):
         bad.append("overtime")
 
-    if "tie_break_order" in body and not _tie_break_ok(body["tie_break_order"]):
+    # optional: missing or null both mean "use the default order"
+    if body.get("tie_break_order") is not None and not _tie_break_ok(body["tie_break_order"]):
         bad.append("tie_break_order")
 
     if not _roster_ok(body.get("roster")):

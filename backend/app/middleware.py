@@ -21,9 +21,23 @@ class BodySizeLimit(BaseHTTPMiddleware):
                 # No (valid) Content-Length, e.g. chunked: read it and measure.
                 too_big = len(await request.body()) > MAX_BODY_BYTES
             if too_big:
+                await _drain(request)
                 return error_response(413, "PAYLOAD_TOO_LARGE", "request body is larger than 1 MB",
                                       {"max_bytes": MAX_BODY_BYTES})
         return await call_next(request)
+
+
+async def _drain(request, limit=16 * MAX_BODY_BYTES):
+    # Read and throw away the upload before answering: if we reply while the client is still sending,
+    # the connection is reset and the client never sees the 413. Capped so a huge body can't hold us forever.
+    read = 0
+    try:
+        async for chunk in request.stream():
+            read += len(chunk)
+            if read > limit:
+                break
+    except Exception:
+        pass
 
 
 class RateLimiter:
