@@ -138,3 +138,67 @@ class Showcase(Base):
     match_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     product_id: Mapped[str] = mapped_column(String(64))
     pinned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+# ---------- roster (plan 07, FR-2.2, spec §5.11) ----------
+
+class RosterLeague(Base):
+    __tablename__ = "roster_leagues"
+    league_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(64))
+    sport_id: Mapped[str] = mapped_column(String(64))
+    window_open: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD, inclusive
+    window_close: Mapped[str] = mapped_column(String(10))
+    max_squad_size: Mapped[int] = mapped_column(Integer)
+    required_positions: Mapped[dict] = mapped_column(JSONB_, default=dict)
+
+
+class Squad(Base):
+    __tablename__ = "squads"
+    squad_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    league_id: Mapped[str] = mapped_column(String(64), index=True)
+    club_id: Mapped[str] = mapped_column(String(64))
+    tenant_id: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(200))
+
+
+class Registration(Base):
+    """A player's membership of a squad for a date range [start_date, end_date). end_date NULL = open."""
+    __tablename__ = "registrations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    player_id: Mapped[str] = mapped_column(String(64), index=True)
+    league_id: Mapped[str] = mapped_column(String(64), index=True)
+    squad_id: Mapped[str] = mapped_column(String(64))
+    parent_squad_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    registration_type: Mapped[str] = mapped_column(String(16))  # initial | transfer | loan
+    start_date: Mapped[str] = mapped_column(String(10))
+    end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # exclusive
+    loan_end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    role: Mapped[str] = mapped_column(String(16))
+
+
+class RosterAudit(Base):
+    """Append-only roster history (who, when, why)."""
+    __tablename__ = "roster_audit"
+    seq: Mapped[int] = mapped_column(Integer, primary_key=True)
+    audit_id: Mapped[str] = mapped_column(String(16), unique=True)
+    player_id: Mapped[str] = mapped_column(String(64), index=True)
+    league_id: Mapped[str] = mapped_column(String(64))
+    action: Mapped[str] = mapped_column(String(16))
+    from_squad_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    to_squad_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    effective_date: Mapped[str] = mapped_column(String(10))
+    state: Mapped[str] = mapped_column(String(32))
+    who: Mapped[str] = mapped_column(String(200))
+    when: Mapped[str] = mapped_column(String(20))
+    why: Mapped[str] = mapped_column(String(1000))
+    loan_registration_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # for loan_return dedupe
+
+
+class LiveMatch(Base):
+    """matches_in_progress from /roster/setup (edge case 6)."""
+    __tablename__ = "matches_in_progress"
+    league_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    match_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    home_squad_id: Mapped[str] = mapped_column(String(64))
+    away_squad_id: Mapped[str] = mapped_column(String(64))
