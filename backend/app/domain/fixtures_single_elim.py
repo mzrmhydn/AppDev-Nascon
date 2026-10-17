@@ -51,21 +51,29 @@ def first_round(teams, prefix, bracket):
     return matches
 
 
-def place(by_id, target, team):
-    """Put a team into the slot a link points to (no-op for null links)."""
+def place(by_id, target, team, seed):
+    """Put a team (and its original seed) into the slot a link points to (no-op for null links)."""
     if target is not None:
-        by_id[target["match_id"]][target["slot"]] = team
+        match = by_id[target["match_id"]]
+        match[target["slot"]] = team
+        match[target["slot"] + "_seed"] = seed
+
+
+def seed_of(match, team):
+    if team is None:
+        return None
+    return match["home_seed"] if team == match["home"] else match["away_seed"]
 
 
 def set_winner(by_id, match, winner):
-    """Record a result and push winner/loser along winner_to/loser_to."""
+    """Record a result and push winner/loser (with their seeds) along winner_to/loser_to."""
     match["winner"] = winner
     if match["bye"]:
         match["loser"] = None
     else:
         match["loser"] = match["away"] if winner == match["home"] else match["home"]
-    place(by_id, match["winner_to"], winner)
-    place(by_id, match["loser_to"], match["loser"])
+    place(by_id, match["winner_to"], winner, seed_of(match, winner))
+    place(by_id, match["loser_to"], match["loser"], seed_of(match, match["loser"]))
 
 
 def apply_results(by_id, results):

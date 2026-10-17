@@ -35,6 +35,7 @@ def test_spec_example_n6():
     assert (m["R1M4"]["home"], m["R1M4"]["away"]) == ("t3", "t6")
     # bye winners propagated immediately
     assert m["R2M1"]["home"] == "t1" and m["R2M1"]["away"] is None
+    assert m["R2M1"]["home_seed"] == 1 and m["R2M1"]["away_seed"] is None
     assert m["R2M2"]["home"] == "t2"
     assert m["R3M1"]["winner_to"] is None
 
@@ -47,6 +48,7 @@ def test_results_propagate_to_final():
     m = by_id(r)
     assert m["R1M2"]["loser"] == "t5"
     assert m["R2M1"]["away"] == "t4" and m["R2M1"]["loser"] == "t1"
+    assert m["R2M1"]["away_seed"] == 4 and m["R3M1"]["away_seed"] == 2
     assert (m["R3M1"]["home"], m["R3M1"]["away"], m["R3M1"]["winner"]) == ("t4", "t2", "t2")
 
 
@@ -58,6 +60,7 @@ def test_third_place_match():
     assert m["R1M2"]["loser_to"] == {"match_id": "TP", "slot": "away"}
     assert m["TP"]["bracket"] == "third_place"
     assert (m["TP"]["home"], m["TP"]["away"]) == ("d", "b")
+    assert (m["TP"]["home_seed"], m["TP"]["away_seed"]) == (4, 2)
 
 
 def test_two_teams_one_round():
