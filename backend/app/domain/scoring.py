@@ -1,21 +1,11 @@
 # Event-sourced score projection + event rule checks (FR-1.1, spec §5.9).
 # Pure functions: the score is rebuilt from the event list every time. Only scoring_model and
 # config values are used — never sport or event names.
+from app.domain.rule_error import RuleError
 
 EVENT_TYPES = ["match_init", "match_start", "score", "discipline",
                "tiebreak_winner", "match_end", "compensation"]
 COMPENSABLE_TYPES = ["score", "discipline", "tiebreak_winner"]
-
-
-class RuleError(Exception):
-    """A rejected event. The service turns it into the {"error": {...}} body."""
-
-    def __init__(self, status, code, message, details=None):
-        super().__init__(message)
-        self.status = status
-        self.code = code
-        self.message = message
-        self.details = details or {}
 
 
 def is_id(x):
