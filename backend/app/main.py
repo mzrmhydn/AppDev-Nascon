@@ -9,7 +9,8 @@ from app import config
 from app.db import Base, SessionLocal, engine
 from app.errors import install_error_handlers
 from app.middleware import BodySizeLimit, RateLimit, limiter
-from app.routes import api_auth, audit_rbac, audit_reset, audit_roster, audit_store, health
+from app.routes import (api_auth, audit_offline, audit_rbac, audit_reset, audit_roster, audit_store,
+                        health)
 from app.routes import audit_events, audit_fixtures, audit_leagues, audit_sports, audit_standings
 from app.seed import is_seeded, reset_baseline
 from app.services import payment_gateway
@@ -46,6 +47,7 @@ app.include_router(audit_rbac.router)
 app.include_router(api_auth.router)
 app.include_router(audit_store.router)
 app.include_router(audit_roster.router)
+app.include_router(audit_offline.router)
 # Track B routers (added when each one is committed)
 app.include_router(audit_sports.router)
 app.include_router(audit_events.router)
