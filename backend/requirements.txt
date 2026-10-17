@@ -1,0 +1,12 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+sqlalchemy==2.0.36
+psycopg[binary]==3.2.3
+pyjwt==2.10.1
+fpdf2==2.8.2
+redis==5.2.1
+# test tools live in the image on purpose: run_tests.sh must not need internet
+pytest==8.3.4
+pytest-cov==6.0.0
+httpx==0.28.1
+pypdf==5.1.0
