@@ -13,25 +13,28 @@
 - 201 `{"sport_id", "status":"created", "config": <stored config>}`.
 - Seed sports use the **same** stored format (plan 01).
 
-## B. `POST /audit/v1/events` — `services/events.py` + `domain/scoring.py`
-Order of work inside one DB transaction:
-1. Schema check (event_id, match_id strings matching id rules; type in the 7 types; payload object with the fields for that type; correct JSON types) → 400 `VALIDATION_ERROR`.
-2. **Idempotency:** look up `event_id`. Exists with identical request (compare canonical JSON of the whole body) → return stored response with **200**. Exists with different body → 409 `DUPLICATE_EVENT_ID`.
-3. `match_init`: stream exists → 409 `MATCH_EXISTS`; sport unknown → 404 `SPORT_NOT_FOUND`; else create `matches` row.
-   Other types: no stream → 404 `MATCH_NOT_FOUND`.
-4. **Lock the match row** (`SELECT … FOR UPDATE`) so sequence numbers can't collide.
-5. Load all events of the match, compute current projection with `project()`, then apply the rule table of §5.9:
-   - `match_start` needs `upcoming` else 409 `ILLEGAL_TRANSITION`.
-   - `score` needs `in_progress` else 409 `MATCH_NOT_IN_PROGRESS`; team_id ∉ {home, away} → 400 `VALIDATION_ERROR`; event_type ∉ sport scoring_events → 400 `UNKNOWN_EVENT_TYPE`; innings limit reached → 409 `INNINGS_COMPLETE`; round series decided → 409 `SERIES_ALREADY_DECIDED`.
-   - `discipline` (`points` int), `tiebreak_winner` need `in_progress`.
-   - `match_end` needs `in_progress` else 409 `ILLEGAL_TRANSITION`; level score + draw not allowed + no active tiebreak_winner → 409 `TIE_NOT_ALLOWED`.
-   - `compensation`: target event_id unknown → 404 `EVENT_NOT_FOUND`; target already compensated / not score|discipline|tiebreak_winner / other match → 409 `INVALID_COMPENSATION`. Allowed in any status after init (incl. completed).
-   - ⚠ Order of 400 vs 404 checks follows spec §5.2: 400 (schema + team_id + event_type) before 404? **event_type check needs the sport → do it after the 404 check for the match** — that's fine because 404 only happens when the match doesn't exist.
-6. Insert row: `sequence = count+1`, `signature = sign(event_id, payload)` (payload = the **request's** payload object), store `request_hash` and the response.
-7. Response 201 `{event_id, match_id, type, sequence, match_version: sequence, signature}`.
-8. After commit: `realtime.broadcast(match_id, {"type":"match_updated","match_id","version"})`.
+## B. `POST /audit/v1/events` — `services/events.py` (DB glue) + `domain/scoring.py` (rules, already written)
+`services.events.append_event(db, body: dict) -> tuple[int, dict]` is the ONE function used by `/audit/v1/events`, `/api/v1/events`, offline-sync and the demo seed. `body` is the **raw JSON dict** as received (never a Pydantic dump — the signature and the idempotency comparison must use exactly what the client sent).
+Do these steps in this exact order, in one DB transaction:
+1. **Envelope schema → 400 `VALIDATION_ERROR`:** `event_id` and `match_id` are strings matching `^[A-Za-z0-9_.:-]{1,64}$`; `type` is one of the 7 types; `payload` is an object. Then `payload_bad_fields(type, payload)` (already in `domain/scoring.py`) — non-empty list → 400 with `details.fields`. For `match_init` also: `home_team_id != away_team_id` else 400.
+2. **Idempotency:** `SELECT` the row with this `event_id` (event ids are unique across ALL matches).
+   - found and `canonical(stored_request) == canonical(body)` → return `(200, stored_response)` — stop.
+   - found and different → 409 `DUPLICATE_EVENT_ID` — stop.
+   - Only **successful** appends are stored. A request that was rejected before stored nothing, so re-sending it simply runs again.
+3. **Stream existence:**
+   - `match_init`: match row exists → 409 `MATCH_EXISTS`; sport unknown → 404 `SPORT_NOT_FOUND`; else insert the `matches` row (league_id from payload if given). If two identical `match_init` requests race, the PK insert raises `IntegrityError` → rollback and redo step 2 (gives 200 replay or 409).
+   - every other type: no match row → 404 `MATCH_NOT_FOUND`.
+4. **Lock:** `SELECT … FROM matches WHERE match_id = :id FOR UPDATE` (serialises appends to one match so sequence numbers never collide).
+5. Load the match's events ordered by `sequence`, build `projection = project(sport_config, match, events)`.
+6. For `compensation`: look up the target with `SELECT … WHERE event_id = payload.compensates` across **all** matches (target in another match → 409, not 404).
+7. Call `check_event(sport_config, projection, type, payload, target_event, match_id)` (already written). It raises `RuleError(status, code, message, details)` in the spec's order (400 → 404 → 409). Convert it to `AppError` with the same fields.
+8. Insert: `sequence = len(events) + 1`, `signature = sign(event_id, body["payload"])` (raw payload), the raw request, and the response.
+9. Return `(201, {"event_id", "match_id", "type", "sequence", "match_version": sequence, "signature"})`.
+10. After commit: broadcast `{"type":"match_updated","match_id","version":sequence}` (plan 09; wrapped in try/except).
 
-## C. `domain/scoring.py` — `project(sport_config, events) -> dict` (PURE)
+`services.events.match_version(db, match_id) -> int` = number of events of that match (0 for a league fixture with no events). Offline sync uses it.
+
+## C. `domain/scoring.py` — `project(sport_config, match, events) -> dict` (PURE, already written — returns the full `/score` body)
 - Walk events in sequence. Build `compensated_by = {target_event_id: compensation_event_id}` first; compensated events **and** compensation events are neutral.
 - Status: `upcoming` after init; `in_progress` after an active `match_start`; `completed` after `match_end`.
 - Score per model — **use only config values, never names**:
@@ -44,7 +47,12 @@ Order of work inside one DB transaction:
 - Limits (used by the validator): innings complete when `balls ≥ innings_per_team*overs*bpo` or `wickets ≥ innings_per_team*wickets_per_innings`; round decided when a team has `≥ (best_of+1)//2`.
 - Events list in response: every event incl. compensations, with `compensated` and `compensated_by`.
 
-## D. `GET /audit/v1/score/{match_id}` → rebuild from the log every time (no counters). 404 `MATCH_NOT_FOUND`. `version` = number of events. `league_id` null for stand-alone matches.
+## D. `GET /audit/v1/score/{match_id}` → load match + sport + events, return `project(...)` (rebuilt every call, no counters). Unknown match → 404 `MATCH_NOT_FOUND`. `version` = number of events. `league_id` null for stand-alone matches.
+
+## E. `POST /audit/v1/sports` route (`services/sports.py`)
+1. `fields = validate_sport_config(body)` (already written) → non-empty → 400 `VALIDATION_ERROR`, `details: {"fields": fields}`.
+2. Sport id exists → 409 `SPORT_EXISTS`.
+3. Store `normalize_sport_config(body)`; return 201 `{"sport_id", "status": "created", "config": <stored>}`. No restart needed: every request reads the sport from the DB.
 
 ## Tests (coverage area `scoring` = `domain/scoring.py`, `domain/sport_config.py`, `services/events.py`)
 Kabaddi example from spec; cricket overs `"3.2"`; compensation after completion changes outcome; idempotent replay 200; duplicate id 409; illegal transitions; `TIE_NOT_ALLOWED`; mystery sport usable immediately.

@@ -24,16 +24,22 @@ POLICY = {
   "platform_config":  {"super_admin": "always"},
 }
 ```
-Rules: `always`; `same_tenant` (target's tenant == user's tenant); `own_league` (league_id == user.league_id **and** same tenant); `own_club` (club_id == user.club_id); `own_club_player` (player's club == user.club_id); `self` (player_id == user.player_id). Role not in the dict → deny.
+Rules: `always`; `same_tenant` (target's tenant == user's tenant); `own_league` (same tenant **and** target league_id == user.league_id); `own_club` (same tenant **and** target club_id == user.club_id); `own_club_player` (same tenant **and** target player's club_id == user.club_id); `self` (same tenant **and** target player_id == user.player_id). Role not in the dict → deny.
+Check yourself against `docs/SPEC-TABLES.md` §5.13: e.g. club_manager P5 on `player-alpha-1` (club-alpha-1) → A; on `player-alpha-2` (club-alpha-2) → D; player P5 on itself → A.
 `can(user, action, target) -> bool`. One function, used by probes **and** the real `/api/v1` routes. Great viva answer: "the policy is data; adding a role is one line".
 
 ## Probe routes P1–P7 (spec table)
-- Order: **auth first** (401) → look up the target's tenant/owner → if the id doesn't exist at all → 404 (with the matching `*_NOT_FOUND` — use `LEAGUE_NOT_FOUND`, `SQUAD_NOT_FOUND` for clubs?, `PLAYER_NOT_FOUND`) → `can()` → 200 `{"authorized":true}` or 403 `FORBIDDEN`.
+- Order: **auth first** (401) → look up the target → if the id doesn't exist at all → 404 → `can()` → 200 `{"authorized":true}` or 403 `FORBIDDEN`.
+  - 404 codes (decided): unknown league → `LEAGUE_NOT_FOUND`; unknown club → `SQUAD_NOT_FOUND` (the catalogue has no club code); unknown player → `PLAYER_NOT_FOUND`.
+  - Lookups: league → `leagues.tenant_id`; club → `clubs.tenant_id`; player → `players.club_id` + `players.tenant_id` (plan 01 table).
+  - Route → action mapping: P1 `create_tenant`; P2 `manage_fixtures` (target = league); P3 `manage_roster` (club); P4 `manage_products` (club); P5 `edit_player` (player); P6 `view_club` (club); P7 `platform_config`.
+  - Every rule except `always` also requires **same tenant** (user.tenant_id == target tenant). That alone makes all "foreign" rows 403.
   - Note: cross-tenant must be **403 not 404**. All grader ids exist (seeded), so 404 only for truly unknown ids.
 - Do not validate or use the body. PATCH P5 gets `{}`.
 - Write a pytest that loops over the **entire expected matrix** from the spec (it's ~65 checks) — this is also our negative-auth test suite (FR-5.1 requires it) and gives coverage for the `rbac` area.
 
 ## Rate limit (middleware.py)
+- Implement as a Starlette middleware (runs before routing, so it also covers routes that need auth). Client IP = `request.client.host`.
 - Only `/api/v1/*`. Sliding window per client IP: keep a `deque` of timestamps per IP; drop entries older than 10 s; if `len >= 100` → 429 `RATE_LIMITED`, header `Retry-After: <seconds until oldest expires, ≥1>`; else append + continue.
 - Use a `threading.Lock` (routes run in a threadpool).
 - `/audit/v1/*`, `/health`, `/ws/*` exempt.

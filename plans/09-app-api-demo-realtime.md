@@ -13,9 +13,10 @@ The mobile app (frontend dev) is built **right now** against `contracts/API.md` 
 - **Write twins:** `POST /api/v1/events | /roster/transfer | /checkout | /offline-sync` = `can()` check (contract §2.11) **then** call the exact same service as the audit route and return its status + body unchanged.
 
 ## B. Demo data — `seed.py: seed_demo()` (startup + `POST /api/v1/dev/demo-seed`; NEVER from `/audit/v1/reset`)
+At startup call it inside `try/except Exception` + log — a demo bug must never break startup or `/health`. Fixture events go through `services.events.append_event` (Track B) so signatures are real; roster through the roster-setup service.
 Idempotent (skip rows that exist). All ids prefixed `demo-` except the seeded baseline ids it extends. Gives the judges something real to look at:
 - **Clubs** (tenant-alpha): fill profiles of `club-alpha-1` "Alpha United" (AUN, `#0B5FFF`, Alpha Arena Islamabad 33.6844/73.0479, staff coach/manager/physio, 2 seasons of stats), `club-alpha-2` "Alpha Rovers" (ARO), and add `demo-club-alpha-3` "Margalla FC" (MFC), `demo-club-alpha-4` "Rawal City" (RCY). `club-beta-1` "Beta Strikers" for tenant-beta.
-- **League `league-alpha-1`** "Alpha Premier League", season "2026", sport `football`, teams = the 4 alpha clubs, points 3/1/0, qualification spots 2. Fixtures (single round robin, 6 matches `demo-m1..demo-m6`) with `scheduled_at` today/tomorrow and `venue`:
+- **League `league-alpha-1`** already exists from the baseline → **UPDATE its row directly** (do not call `POST /audit/v1/leagues`, which would return 409 `LEAGUE_EXISTS`): name "Alpha Premier League", season "2026", sport `football`, teams = the 4 alpha clubs, points 3/1/0, qualification spots 2. Fixtures (single round robin, 6 matches `demo-m1..demo-m6`) with `scheduled_at` today/tomorrow and `venue`:
   - demo-m1..m3 **completed** with goal events (append through the normal events service so signatures are real; use event ids `demo-evt-…`); one has a discipline event and one has a compensated goal (shows the timeline feature).
   - demo-m4 **in_progress** (started, 1–1).
   - demo-m5, demo-m6 **upcoming**.
@@ -26,7 +27,7 @@ Idempotent (skip rows that exist). All ids prefixed `demo-` except the seeded ba
 
 ## C. Realtime — `realtime.py` + `routes/ws.py`
 - `ConnectionManager`: `dict[match_id, set[WebSocket]]`, `connect`, `disconnect`, `broadcast(match_id, message)`.
-- Services run in threadpool threads → broadcast from sync code with `anyio.from_thread.run(manager.broadcast, …)` or keep a reference to the event loop at startup and use `asyncio.run_coroutine_threadsafe`. Wrap in try/except — **a broadcast failure must never fail the request**.
+- Services run in threadpool threads, the WebSocket lives on the event loop. Decided approach: in `main.py` startup save `realtime.LOOP = asyncio.get_running_loop()`; `realtime.notify(match_id, message)` (plain sync function) does `asyncio.run_coroutine_threadsafe(manager.broadcast(match_id, message), LOOP)` inside `try/except Exception: pass` — **a broadcast failure must never fail the request**.
 - `/ws/matches/{match_id}`: accept, keep open, ignore incoming messages.
 - If this gets hard, skip it: the app also polls every 5 s. Tell the frontend dev (guard file) if you drop it.
 

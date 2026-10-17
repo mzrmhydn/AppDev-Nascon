@@ -1,0 +1,170 @@
+                 NaSCon ’26 App Dev Competition
+
+     Official Rules, Environment Readiness & Compliance Booklet
+
+  Dates: Oct 17–18, 2026 | Venues: Day 1 – A01 to A03, A103 and A104 | Day 2 – C-401 to
+                                             C-405, FAST-NUCES Islamabad
+
+ Prize Pool: Winner: PKR 35,000 | Runner-Up: PKR 15,000 | Team Size: 1–3 Members
+
+1. Competition Schedule & Two-Phase Structure (Strict 8 Hours)
+
+The competition is divided into two locked phases across two days. Working overnight is impossible
+because Phase I is graded and permanently closed at 15:00 on Day 1, while Phase II is kept confidential
+until 10:15 on Day 2.
+
+• Day 1 (Saturday, Oct 17): Check-in and empty repository check: 10:00–10:44 AM. Sprint 1
+   (Part I): 10:45 AM–03:00 PM (4 hours 15 minutes). Day 1 Cloud Autograder Audit: 03:05–
+   03:30 PM (40 points — permanently locked).
+
+• Day 2 (Sunday, Oct 18): Morning commit verification: 10:00–10:14 AM. Sprint 2 (Part II):
+   10:15 AM–02:00 PM (3 hours 45 minutes). Day 2 Cloud Autograder Audit: 02:05–02:25 PM
+   (45 points). Top-8 Finalist Viva: 02:30–03:50 PM (15 points).
+
+2. Mandatory Pre-Pulled Docker Bundle (Run at Home)
+
+Large downloads and Docker Hub image pulls are throttled on campus Wi-Fi. To keep both Phase
+I and Phase II problem domains strictly confidential, all teams must download the required Docker
+images before arriving on campus.
+The bundle is called the NaSCon Universal Full-Stack & QA Image Bundle. Some images are
+used in Phase I, some in Phase II, and some are decoys.
+Run the following commands at home before Saturday at 09:00 AM.
+
+# Download these images before arriving on campus.
+docker pull postgres:16-alpine
+docker pull redis:7-alpine
+docker pull minio/minio:RELEASE.2024-09-22T00-33-43Z
+docker pull rabbitmq:3.13-management-alpine
+docker pull nats:2.10-alpine
+docker pull bluenviron/mediamtx:1.9.1
+docker pull livekit/livekit-server:v1.7.2
+docker pull binwiederhier/ntfy:v2.11.0
+docker pull prom/prometheus:v2.54.1
+docker pull grafana/grafana:11.2.0
+docker pull grafana/k6:0.54.0
+docker pull selenium/hub:4.24.0
+docker pull selenium/node-chrome:4.24.0
+
+                                                                 1
+docker pull selenium/node-firefox:4.24.0
+
+# Intel/AMD Windows and Linux laptops:
+docker pull selenium/node-edge:4.24.0
+
+# Apple Silicon Macs should use:
+# seleniarm/node-chromium:4.24.0
+
+# Also download ONE backend runtime image.
+# Examples:
+docker pull python:3.12-slim
+# OR
+docker pull node:20-alpine
+
+2.1 Mobile Platform, QA Tools & Private Hotspot Requirement
+
+1. Mobile Platform (One Is Sufficient):
+   Supporting either Android or iOS satisfies the mobile platform requirement. Teams may use Flutter,
+   React Native, native Android development with Kotlin or Java, or native iOS development with
+   Swift.
+   Download and cache the required Gradle, CocoaPods, and Pub dependencies before the competition
+   so they are available offline.
+   Bringing a physical phone with a USB data cable is strongly recommended. Enable USB debugging
+   where applicable. Using a physical phone instead of an emulator can save approximately 4 GB of
+   RAM.
+
+2. Automated Testing Tools:
+   Install Appium 2 with either the UiAutomator2 driver for Android or the XCUITest driver for iOS.
+   Also install Selenium WebDriver bindings and the required testing framework, such as pytest,
+   JUnit, or TestNG. Configure Allure or HTML report generation and install either k6 or Locust for
+   performance testing.
+
+3. Phone Hotspot or Travel Router for the Team Network:
+   Campus Wi-Fi isolates connected devices and prevents them from communicating directly with one
+   another.
+   Bring a smartphone that can create a local Wi-Fi hotspot or a travel router. This allows team
+   laptops and the test phone to communicate over a local network using their local IP addresses.
+
+4. Campus Wi-Fi Allowlist:
+   Campus Wi-Fi is used for pushing code to GitHub, running GitHub Actions, accessing AI assistants
+   such as ChatGPT, Claude, Cursor, and Copilot, and downloading lightweight packages.
+   The required package sources include pypi.org, registry.npmjs.org, pub.dev, and repo.maven.apache.org.
+
+                                                                 2
+3. Low-RAM (8 GB / 16 GB) Laptop Survival Guide
+
+• Cloud Grading Reduces the Load on Your Laptop:
+   At the submission deadlines (03:00 PM on Day 1 and 02:00 PM on Day 2), the official GitHub
+   Actions Autograder runs your docker-compose.yml file on GitHub’s cloud runner, which has 16
+   GB of RAM and uses ubuntu-latest.
+   Your laptop does not need to run every container simultaneously during the official grading process.
+
+• Split Local Testing Across Team Members:
+   During the coding sprint, teams using laptops with 8 GB or 16 GB of RAM should distribute local
+   testing workloads across teammates’ machines connected through the team’s phone hotspot.
+   A suggested arrangement is:
+
+     – Laptop 1: Backend services and containers.
+     – Laptop 2: Mobile application and physical phone connected through USB.
+     – Laptop 3: Selenium browser containers and automated tests.
+
+   To reduce memory usage, configure browser containers with shm_size: "1gb" and SE_START_VNC:
+   "false".
+   Here is what these settings mean:
+
+     – shm_size: "1gb" allocates 1 GB of shared memory to the container. Shared memory is used
+         by processes running inside the container, including browser processes.
+
+     – SE_START_VNC: "false" disables the VNC service that provides a remotely viewable browser
+         desktop in Selenium browser containers.
+
+   These settings are intended to reduce unnecessary resource usage during local testing.
+
+4. Zero-Overnight Integrity & Cloud Autograding Rules
+
+1. Personal GitHub Account and Empty Repository at 10:40 AM:
+   Create a private GitHub repository under the team lead’s personal GitHub account, which provides
+   2,000 free GitHub Actions minutes, and invite nascon-eval-26 to the repository.
+   At 10:40 AM on Day 1, the repository must be completely empty, with zero commits.
+   All project scaffolding, Dockerfiles, and source code must be committed after 10:45 AM.
+
+2. Hourly Commit Rule:
+   Teams must push their code to GitHub at least once every hour during the coding sprints.
+   Each missed hourly push incurs a penalty of 2 points.
+
+3. GitHub Server Timestamps Determine Eligibility:
+   Only commits pushed to GitHub by 03:05:00 PM PKT on Day 1 and 02:05:00 PM PKT on Day 2
+   are eligible for grading.
+
+                                                                 3
+   Local files that have not been committed, Git stashes, and pushes made after the respective dead-
+   lines are ignored by the cloud autograder.
+4. Zero Overnight Commits:
+   Between 03:05 PM PKT on Day 1 and 10:15 AM PKT on Day 2, no commits may be pushed to
+   GitHub.
+   On Day 2, the repository history must continue directly from the locked Day 1 commit SHA (the
+   unique identifier of the commit).
+5. AI Tools and Top-8 Live Mutation Viva:
+   AI tools, including Cursor, Claude, ChatGPT, and Copilot, are fully allowed.
+   Managed backend-as-a-service platforms (BaaS), including Firebase and Supabase, are prohibited.
+   Using pre-built repositories is also prohibited.
+   After the Day 2 cloud audit, the eight highest-scoring teams advance to a 10-minute viva with the
+   judge.
+   The viva includes:
+
+      • A 5-minute live code mutation task.
+      • Two hidden complexity scenarios.
+      • A defense of eight short Architecture Decision Records documented in ADR.md.
+      • A defense of the traceability matrix documented in TRACEABILITY.md.
+
+5. Tie-Breakers & Penalty Floor
+
+All individual item scores and total scores are floored at zero. No score can fall below zero.
+Any tie, including a tie for qualification among the Top 8 teams or for the first- and second-place
+prizes, is resolved using the following criteria in order:
+
+1. Higher objective score on Day 2.
+2. More automated test vectors passed across both days.
+3. Earlier final GitHub push timestamp on Day 2.
+
+                                                                 4
+

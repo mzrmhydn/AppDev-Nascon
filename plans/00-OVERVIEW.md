@@ -31,14 +31,19 @@ Each area: `S = 0.9·P·(passed/total vectors) + 0.1·P·[coverage ≥ 85 %]`. *
 | `requirements.txt` | B asks A in chat to add a package |
 - Track B starts **immediately** with pure functions in `domain/` + unit tests (no DB needed), and only needs A's foundation (`errors.py`, `signing.py`, `db.py`) after ~11:45.
 - `seed.py` (A) needs the 4 sport configs → B posts them as a Python dict in `domain/seed_sports.py` (B owns) and A imports it.
+- **Interfaces between tracks (agree once, don't change):**
+  - B → A: `services.events.append_event(db, body: dict) -> tuple[int, dict]` (status code + response body; raises `AppError` on failure), `services.events.match_version(db, match_id) -> int`, `domain.scoring.project(...)`. A uses them in offline-sync, demo seed and `/api/v1` fixtures.
+  - A → B: `errors.AppError(status, code, message, details)`, `signing.sign(id_, payload) -> str`, `db.get_db` (FastAPI dependency yielding a Session), `db.Base`.
+  - Until A's files exist, B codes against these exact names; B's `domain/rule_error.py` `RuleError` is converted to `AppError` in B's services.
+- `seed.py` must call `seed_demo()` inside `try/except Exception` and log the error — **a demo-seed bug must never stop startup or `/health`** (that would be the −10 non-reproducible penalty).
 - Both: `git pull --rebase` before every push; commit small and often.
 
 ## Timeline (Day 1)
 | Time | Target |
 |---|---|
-| 11:45 | Push #2: compose up, `/health`, errors, signature fn + test vector, DB models |
-| 12:45 | Push #3: `/reset` exact, RBAC + probes + ping + 413, login + `/api/v1/leagues`, scoring events + score |
-| 13:45 | Push #4: standings, checkout burst passes, roster, RR + single elim, offline-sync, app API |
+| by 12:45 | **Track A:** compose up, `/health`, errors, signing, `/reset` exact, login. **Track B:** domain functions for scoring, standings, RR, single elim with unit tests (done locally) + `models_league.py`. Push. |
+| by 13:45 | **A:** RBAC + probes + ping + 413, checkout burst passes, roster, app API reads. **B:** routes/services for sports, events, score, leagues, standings, fixtures (RR + single). Push. |
+| by 14:15 | **A:** offline-sync, write twins, demo seed. **B:** double elim, then Swiss. |
 | 14:15 | Double elim / Swiss if time; `COVERAGE.json` from real run; README; TRACEABILITY |
 | 14:30 | **Fresh-clone test** (§10). Fix only. |
 | 14:45 | Final push (deadline 15:05:00) |
@@ -59,7 +64,8 @@ docker-compose.yml          api (build ./backend, port 8080:8080) + db (postgres
 run_tests.sh, COVERAGE.json, README.md, TRACEABILITY.md, ADR.md
 backend/
   Dockerfile                python:3.12-slim, pip install -r requirements.txt, uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
-  requirements.txt          fastapi, uvicorn[standard], sqlalchemy>=2, psycopg[binary], pyjwt, fpdf2, redis, pytest, pytest-cov, httpx
+  requirements.txt          fastapi, uvicorn[standard], sqlalchemy>=2, psycopg[binary], pyjwt, fpdf2, redis, pytest, pytest-cov, httpx, pypdf
+                            (test tools are in the image on purpose: run_tests.sh must not need internet)
   app/
     main.py                 app factory, middlewares, exception handlers, routers, startup (create tables + seed)
     config.py               env vars: DAY1_SALT, JWT_SECRET, DATABASE_URL, REDIS_URL

@@ -1,7 +1,7 @@
 # CLAUDE.md / AGENTS.md — rules for every human and AI agent in this repo
 
 **Project:** NaSCon'26 App Dev, Part I — Multi-Sport League & Club Operations Platform.
-**Binding spec:** `docs/NaSCon26-AppDev-Part1-spec.pdf` (read it — it wins over everything). Competition rules: `docs/NaSCon26-Rules-Booklet.pdf`.
+**Binding spec:** `docs/NaSCon26-AppDev-Part1-spec.pdf` (wins over everything). **Agents: read the text versions** — `docs/NaSCon26-AppDev-Part1-spec.txt` (full text) and `docs/SPEC-TABLES.md` (hand-checked tables; the .txt scrambles tables with multi-line cells, so for any table use SPEC-TABLES.md). Competition rules: `docs/NaSCon26-Rules-Booklet.txt`.
 **Deadline:** final push ≤ **15:05:00 PKT** Day 1 (aim 14:45). Push at least once in each window **10:45–11:45, 11:45–12:45, 12:45–13:45, 13:45–14:45** (−2 per missed window).
 
 ## 0. Read order for an agent starting work
@@ -23,7 +23,8 @@ Agents work **only** inside their human's folders. Need something elsewhere → 
 
 ## 2. Hard rules from the spec (each one costs points if broken)
 - `DAY1_SALT=<salt> docker compose up -d --build` on a clean Ubuntu box, ≤ 10 min, `/health` 200 within 120 s, **no manual steps**. API on host port **8080**. Compose forwards `DAY1_SALT: ${DAY1_SALT}`. (−10 if broken)
-- **Never hard-code sport or event names** (`"football"`, `"goal"`, `"wicket"`…) in domain logic. Branch only on `scoring_model` (`event`/`innings`/`round`) and config values. Sport names may appear **only** in seed data. (−8)
+- **Never hard-code sport or event names** (`"football"`, `"cricket"`, `"goal"`, `"six"`…) in domain logic. Branch only on `scoring_model` (`event`/`innings`/`round`) and config values. Sport and event names may appear **only** in seed data (`domain/seed_sports.py`, `seed.py`) and tests. (−8)
+  - Allowed: the spec's **config field names** `points`, `runs`, `legal_ball`, `wicket`, `rounds`, `best_of`, `balls_per_over`… — e.g. `if cfg["wicket"]:` is fine; `if event_type == "wicket":` is NOT.
 - No Firebase/Supabase/BaaS; no fixture-generation libraries. Web frameworks, ORMs, JWT and PDF libraries are fine.
 - `DAY1_SALT` only from env, never committed. `.env.example` has a placeholder.
 - Error body for every non-2xx: `{"error":{"code","message","details"}}`. Validation order: 400 → 404 → 409/402.
@@ -42,7 +43,11 @@ Before finishing any task that touches an endpoint used by the app (anything in 
 > "⚠ CONTRACT DEVIATION — tell the frontend dev: `<route>` now returns/needs `<X>` instead of `<Y>` because `<reason>`."
 Details: `plans/FRONTEND-CONTRACT-GUARD.md`.
 
+## 4b. Running tests locally (no Docker needed for pure functions)
+From the repo root: `python -m pip install -r backend/requirements.txt` once, then `python -m pytest tests/backend -q`. (`tests/backend/conftest.py` puts `backend/` on the import path.) Tests that need Postgres run inside Docker via `./run_tests.sh`.
+
 ## 5. Explain every decision (private notes, gitignored)
+Decision numbers: **Track A uses D-BE-000…099, Track B uses D-BE-100…199, frontend D-FE-000…** (no clashes when notes are shared).
 After each task append to `notes/DECISIONS-<BE|FE|LEAD>.md` (one entry per decision where a reasonable developer could have chosen differently):
 ```
 ## D-BE-007 — <title> (FR-x.x)

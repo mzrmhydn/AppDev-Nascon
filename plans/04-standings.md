@@ -1,19 +1,25 @@
 # 04 — Leagues + standings — spec FR-1.4, §5.8, §5.10 (6 pts)
 
 ## A. `POST /audit/v1/leagues` (`services/leagues.py`)
-Validation order: 400 (required fields, types, teams unique 2–40, fixture teams ∈ teams, home ≠ away, `qualification.spots` int 1..len(teams), tie_break tokens valid) → 404 `SPORT_NOT_FOUND` → 409 `LEAGUE_EXISTS` → 409 `MATCH_EXISTS` (any fixture match_id already used anywhere).
+Validation order (first failure wins):
+1. 400 `VALIDATION_ERROR` — required: `league_id` (id pattern), `sport_id` (string), `teams` (array of unique id strings, length 2–40), `fixtures` (array of `{match_id, home, away}`; home/away ∈ teams; home ≠ away; match_ids unique **within the request**), `qualification.spots` (int 1..len(teams)). Optional: `points` `{win, draw, loss}` ints; `tie_break_order` (same tokens as §5.6, no repeats); `lots_seed` int.
+2. 404 `SPORT_NOT_FOUND`.
+3. 409 `LEAGUE_EXISTS` (league_id already in the `leagues` table — note the 3 baseline RBAC leagues live in the same table).
+4. 409 `MATCH_EXISTS` (any fixture match_id already exists as a match stream).
+Then insert the league (`tenant_id` NULL) + one `matches` row per fixture, in one transaction.
 - `points` default 3/1/0; `tie_break_order` default = sport's; `lots_seed` default = seed of last `/reset` (42).
 - Each fixture → a `matches` row (`league_id`, `sport_id`, home, away) = a match stream with status `upcoming` (no events yet; projection of an empty log = upcoming).
 - 201 `{"league_id","status":"created","team_count","fixture_count"}`.
 
-## B. `domain/standings.py` — `compute_standings(league, sport_config, results)` PURE
-`results` = for each fixture: `{match_id, home, away, status, outcome, home_score, away_score, home_balls, away_balls, home_wickets, away_wickets, home_fp, away_fp, winner_team_id}` (from `project()`).
+## B. `domain/standings.py` — `compute_standings(league, sport_config, projections)` PURE (already written)
+`league` = dict of the league row (`league_id`, `teams`, `points`, `tie_break_order`, `qualification_spots`, `lots_seed`); `projections` = list of `project()` outputs, one per fixture of the league (fixtures with no events project to `upcoming`).
 1. **Played** = completed and outcome ≠ undecided. Others are "remaining".
 2. Per team: played/won/drawn/lost, scored/conceded, points = won·W + drawn·D + lost·L (a tiebreak win is a win), fair_play = sum of active discipline points over **completed league matches**.
 3. `diff` by model (branch on `scoring_model`, never on names):
    - event: scored − conceded. round: rounds won − rounds lost.
    - innings: NRR = runs_scored / overs_faced − runs_conceded / overs_bowled, round(…, 3). overs = legal balls / bpo (decimal). **If the innings ended all-out (wickets ≥ wickets_per_innings·innings_per_team) count overs as the full `overs_per_innings`.** Overs bowled = opponent's overs faced. Guard division by zero (0 overs → that term = 0).
-4. **h2h**: for every ordered pair (a, b) incl. never-met (zeros): played, points earned by a, scored, conceded.
+4. **h2h**: for every ordered pair (a, b) **with a ≠ b** (no `h2h[a][a]`), incl. never-met (zeros): played, points earned by a, scored, conceded. (Already implemented this way in `domain/standings.py`.)
+   - `tie_break_order` normalisation: `draw_lots` always last (use `normalize_tie_break_order` from `domain/sport_config.py`).
 5. **Ordering (exact):** sort by points desc; equal-points groups → `resolve(group)`:
    ```
    resolve(group):

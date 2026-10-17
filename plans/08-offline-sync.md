@@ -5,17 +5,19 @@
 ## `POST /audit/v1/offline-sync` (and the `/api/v1/offline-sync` twin with auth)
 - Envelope: `device_id` string, `actions` array 1–100, each `{action_id, type ∈ score_event|roster_transfer, queued_at timestamp, base_version int ≥ 0, payload object}` → else **400** `VALIDATION_ERROR`. Everything else is HTTP **200**.
 - Processing order: sort by `queued_at` asc, ties by array index. Process one by one. Return results in **request order** with `processed_order` (1-based processing position).
-- Per action, in this order:
-  1. `(device_id, action_id)` already processed → `duplicate` / `skipped_duplicate` / `error_code:null` (return stored server_version? spec: unchanged → current version).
-  2. score_event with an `event_id` that already exists with identical body → `duplicate` / `skipped_duplicate`.
-  3. Unknown match / player / squad → `rejected` / `server_wins` / `MATCH_NOT_FOUND` | `PLAYER_NOT_FOUND` | `SQUAD_NOT_FOUND` …
-  4. `base_version > current version` → `rejected` / `server_wins` / `INVALID_BASE_VERSION`.
-  5. Run the real service. Rule failure (any 4xx code from 5.9/5.11, e.g. `MATCH_NOT_IN_PROGRESS`, `SQUAD_FULL`, `DUPLICATE_EVENT_ID`) → `rejected` / `server_wins` / that code.
-  6. Success → `applied`; resolution `appended` if base_version == version before applying, else `rebased_append`.
-  - current version: score_event → number of events of the match; roster_transfer → number of audit entries of the player.
-  - ⚠ Decide and log: the order of checks 3 vs 4 (spec lists both; we check existence first because version needs the entity).
+- Per action, in this exact order (first match wins):
+  1. `(device_id, action_id)` already in `offline_actions` → `duplicate` / `skipped_duplicate` / `error_code: null`.
+  2. `payload` fails the single route's schema check (plan 03 step 1 / plan 07 step 1) → `rejected` / `server_wins` / `VALIDATION_ERROR`. **Never a whole-request 400** — only the envelope can 400.
+  3. score_event whose `payload.event_id` already exists with an identical body → `duplicate` / `skipped_duplicate`.
+  4. Referenced id unknown (match for score_event; league/player/squad for roster_transfer) → `rejected` / `server_wins` / the matching `*_NOT_FOUND`. (Exception: a `match_init` score_event creates the match — its current version is 0.)
+  5. Compute the current version (roster: after `materialize_loan_returns` as of `effective_date`). `base_version > current` → `rejected` / `server_wins` / `INVALID_BASE_VERSION`.
+  6. Call the real service (`append_event` / the transfer service). It raises `AppError` → `rejected` / `server_wins` / that error's `code`.
+  7. Success → `applied`; `resolution` = `appended` if `base_version == current` (from step 5), else `rebased_append`.
+  - current version: score_event → `match_version(db, match_id)`; roster_transfer → number of audit entries of the player.
+  - `server_version` for **every** status = the entity's version right after this action was processed (for rejected/duplicate that is simply the current version; for an unknown entity use 0).
+  - Each action runs in its **own** transaction (a rejected action must not roll back earlier applied ones). Save every result (all statuses) in `offline_actions` keyed by `(device_id, action_id)`.
 - `server_version` = version after processing (unchanged for rejected/duplicate). `signature` = event signature for applied score_event, else null.
-- Record every processed `(device_id, action_id)` → result, so re-sending the same request returns `duplicate` for every action and changes nothing.
+- Because every result is saved, re-sending the same request returns `duplicate` for every action and changes nothing.
 - `summary {applied, rejected, duplicate}`.
 - Broadcast `match_updated` for applied score events.
 

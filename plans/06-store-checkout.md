@@ -30,7 +30,7 @@ The **`CHECK (stock >= 0)`** is a second safety net: even a bug can't make stock
 9. 201 response exactly as spec.
 
 ## `domain/receipt_pdf.py` (fpdf2)
-Plain PDF with core font Helvetica: title, order_id, customer, item lines, totals. **Must contain text `order_id` and `PKR 4500.00`** → `f"PKR {total_minor // 100}.{total_minor % 100:02d}"` (no thousands separator). Bytes start with `%PDF`. (Unit-test: decode, check prefix; optionally extract text with `pypdf` in tests only.)
+Plain PDF with core font Helvetica: title, order_id, customer, item lines, totals. **Must contain text `order_id` and `PKR 4500.00`** → `f"PKR {total_minor // 100}.{total_minor % 100:02d}"` (no thousands separator). Bytes start with `%PDF`. ⚠ fpdf2 core fonts only support Latin-1: pass every user string through `s.encode("latin-1", "replace").decode("latin-1")` before writing it, so a `customer_id` with Urdu/emoji never causes a 500. (Unit-test: decode, check prefix; optionally extract text with `pypdf` in tests only.)
 
 ## `GET /audit/v1/inventory/{variant_id}` → `{variant_id, stock, reserved}`; 404 `VARIANT_NOT_FOUND`.
 

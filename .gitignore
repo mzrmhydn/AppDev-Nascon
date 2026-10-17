@@ -7,6 +7,7 @@
 !TRACEABILITY.md
 !contracts/API.md
 !plans/*.md
+!docs/*.md
 notes/
 
 # --- Secrets (DAY1_SALT must never be committed) ---

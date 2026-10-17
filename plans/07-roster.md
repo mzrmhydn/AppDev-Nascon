@@ -3,7 +3,7 @@
 ## Tables
 - `roster_leagues(league_id PK, tenant_id, sport_id, window_open date, window_close date, max_squad_size, required_positions JSONB)`
 - `squads(squad_id PK, league_id, club_id, tenant_id, name)`
-- `players(player_id PK, name, position)`
+- `players` — the shared table from plan 01 (`player_id, name, position, club_id, tenant_id`). `/roster/setup` **upserts** its players (sets name, position, club_id = squad's club, tenant_id = squad's tenant).
 - `registrations(id PK, player_id, league_id, squad_id NULL, parent_squad_id NULL, registration_type, start_date, loan_end_date NULL, role, active bool)` — the player's registration history; "current" is computed for a date.
 - `roster_audit(audit_id PK "au-0001"…, seq, player_id, league_id, action, from_squad_id, to_squad_id, effective_date, state, who, when, why)` — **append only**.
 - `matches_in_progress(league_id, match_id, home_squad_id, away_squad_id)`
@@ -14,7 +14,11 @@ Replace everything for that `league_id` (delete its squads/registrations/audit/i
 Validation: 400 for bad shapes/dates/roles (role ∈ captain, vice_captain, starter, substitute).
 
 ## `POST /audit/v1/roster/transfer` — `domain/roster_rules.py` + `services/roster.py`
-Idempotency first after schema check: same request_id + identical body → stored response 200; (different body → treat as 409 `VALIDATION_ERROR`? spec doesn't say — **return the stored response only if identical; else 400 VALIDATION_ERROR** and log the decision).
+Idempotency right after the schema check (step 1): same `request_id` + identical raw body → return the stored response with **200**. Same `request_id` + different body → 400 `VALIDATION_ERROR` with `details.fields: ["request_id"]` (spec defines no code for this; log the decision). Only accepted requests are stored.
+
+**Before running checks 4–8, materialise loan returns:** call `materialize_loan_returns(db, player_id, as_of=effective_date)` (same function the history route uses). It writes any due `loan_return` audit entry (and moves the player back) so "current squad" and "on loan" are correct on `effective_date`.
+
+"Current" always means **as of `effective_date`** for transfers, and **as of `as_of`** for history.
 Checks **in this exact order**, first failure wins:
 1. 400 `VALIDATION_ERROR`: schema, valid dates, type ∈ transfer/loan/release, `to_squad_id` present unless release, loan needs `loan_end_date > effective_date`.
 2. 404 `LEAGUE_NOT_FOUND` → `PLAYER_NOT_FOUND` → `SQUAD_NOT_FOUND` (from, then to).
@@ -36,8 +40,9 @@ Effects:
 
 ## `GET /audit/v1/roster/history/{player_id}?as_of=YYYY-MM-DD`
 - 404 `PLAYER_NOT_FOUND`. `as_of` default = today (server date).
-- **Lazy loan return:** if the player has a loan with `loan_end_date < as_of` and no `loan_return` entry for it yet → append one now (`action:"loan_return"`, who `"system"`, effective_date = loan_end_date + 1 day, from = borrower, to = lender, state active) and give the player a new registration back at the lender, role substitute, `registration_type: "transfer"` (keeps the contract's enum `initial|transfer|loan` for `GET /api/v1/clubs/{id}`). Written **once** (check before inserting; lock the player).
-- `current_squad_id` / `parent_squad_id` for that date; null if released. `history` oldest-first.
+- **Lazy loan return:** if the player has a loan with `loan_end_date < as_of` and no `loan_return` entry for it yet → append one now (`action:"loan_return"`, `who: "system"`, `why: "Automatic loan return"`, `when` = server now, `effective_date` = loan_end_date + 1 day, `from_squad_id` = borrower, `to_squad_id` = lender, `state: "active"`) and give the player a new registration back at the lender, role substitute, `registration_type: "transfer"` (keeps the contract's enum `initial|transfer|loan` for `GET /api/v1/clubs/{id}`). Written **once** (check before inserting; lock the player).
+- `current_squad_id` / `parent_squad_id` for that date; null if released. `history` oldest-first. `league_id` = the league of the player's most recent registration.
+- Lazy loan return lives in ONE function `materialize_loan_returns(db, player_id, as_of)`: lock the player's registrations (`FOR UPDATE`), and for each loan with `loan_end_date < as_of` that has no loan_return entry yet, append it. Calling it twice never duplicates.
 - Note: `base_version` for offline sync = number of audit entries of the player.
 
 ## Tests (area `roster`)

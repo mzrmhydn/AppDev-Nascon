@@ -14,17 +14,19 @@
 ## `run_tests.sh` (repo root, executable: `git update-index --chmod=+x run_tests.sh`)
 ```bash
 #!/usr/bin/env bash
-# Runs all backend unit tests with coverage inside the api image, then writes COVERAGE.json.
+# Runs all backend tests with coverage inside the api container, then writes COVERAGE.json at the repo root.
 set -euo pipefail
+cd "$(dirname "$0")"
 export DAY1_SALT="${DAY1_SALT:-test-salt}"
-docker compose up -d --build db redis api
-docker compose exec -T api pip install -q pytest pytest-cov httpx pypdf >/dev/null 2>&1 || true
+docker compose up -d --build
 docker compose cp tests api:/app/tests
 docker compose exec -T api python -m pytest tests/backend -q --cov=app --cov-report=json:/app/coverage.json
 docker compose exec -T api python tests/coverage_areas.py /app/coverage.json > COVERAGE.json
 cat COVERAGE.json
 ```
-(Adapt paths to the real layout; the point: **one command**, works on a judge's machine with only Docker.)
+- pytest, pytest-cov, httpx and pypdf are already in `backend/requirements.txt`, so nothing is downloaded at test time.
+- The Dockerfile copies `app/` to `/app/app`, working dir `/app` → coverage paths look like `app/domain/scoring.py`, which is what `coverage_areas.py` matches on.
+- `run_tests.sh` must have LF line endings (`.gitattributes` handles it) and the exec bit (`git update-index --chmod=+x run_tests.sh`).
 `tests/coverage_areas.py` reads coverage.py's JSON, sums covered/total statements per area, prints `{"fixtures": 91.2, …}` rounded to 1 decimal.
 
 ## COVERAGE.json

@@ -155,7 +155,7 @@ Request `{ "product_id": "prod-jersey-001" }` → 200, same shape as 2.8. Allowe
 | Twin | Spec route | Who is allowed (else 403 `FORBIDDEN`, checked **before** validation) |
 |---|---|---|
 | `POST /api/v1/events` | `/audit/v1/events` | `super_admin`; `league_organizer` whose `league_id` == the match's league |
-| `POST /api/v1/roster/transfer` | `/audit/v1/roster/transfer` | `super_admin`; `club_manager` whose club owns `from_squad_id` (or `to_squad_id` for a loan return) |
+| `POST /api/v1/roster/transfer` | `/audit/v1/roster/transfer` | `super_admin`; `club_manager` whose club owns `from_squad_id` (squad's `club_id` == user's `club_id`) |
 | `POST /api/v1/checkout` | `/audit/v1/checkout` | any logged-in role (server sets nothing extra; app sends `customer_id` = `user_id`) |
 | `POST /api/v1/offline-sync` | `/audit/v1/offline-sync` | any logged-in role; **each action** is authorized like its single twin — a forbidden action → `status:"rejected"`, `resolution:"server_wins"`, `error_code:"FORBIDDEN"` |
 
@@ -186,3 +186,4 @@ The app re-fetches `/audit/v1/score/{match_id}` or the showcase on each message.
 
 ## CHANGELOG (append only — every change must be told to the frontend dev in chat first)
 - v1 (11:20 Day 1) — initial contract.
+- v1.1 (12:30 Day 1) — backend-only clarification of the transfer twin's permission rule (no change to any request/response shape; app unaffected).
