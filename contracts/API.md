@@ -1,11 +1,11 @@
 # API Contract — Frontend ↔ Backend (v1)
 
-> **Single source of truth between `mobile/` (Talha) and `backend/`.**
+> **Single source of truth between `mobile/` (frontend dev) and `backend/`.**
 > Two families of routes:
 > 1. **`/audit/v1/*` + `/health`** — defined **byte-for-byte** by the Part I spec (`docs/NaSCon26-AppDev-Part1-spec.pdf`, §5). Not repeated here. The spec wins over everything.
 > 2. **`/api/v1/*`** — routes the **mobile app** needs that the spec doesn't define. Defined below. Backend must match these exactly; the app is being built against them in parallel.
 >
-> **Changing anything in this file:** see `plans/FRONTEND-CONTRACT-GUARD.md`. Short version: don't silently change it — tell Talha first, then add a line to the CHANGELOG at the bottom.
+> **Changing anything in this file:** see `plans/FRONTEND-CONTRACT-GUARD.md`. Short version: don't silently change it — tell the frontend dev first, then add a line to the CHANGELOG at the bottom.
 
 ---
 
@@ -184,5 +184,5 @@ The app re-fetches `/audit/v1/score/{match_id}` or the showcase on each message.
 
 ---
 
-## CHANGELOG (append only — every change must be told to Talha in chat first)
+## CHANGELOG (append only — every change must be told to the frontend dev in chat first)
 - v1 (11:20 Day 1) — initial contract.

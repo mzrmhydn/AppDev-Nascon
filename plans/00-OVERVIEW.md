@@ -21,6 +21,18 @@ Each area: `S = 0.9·P·(passed/total vectors) + 0.1·P·[coverage ≥ 85 %]`. *
 - **Track B (algorithms, mostly pure functions):** 03 → 04 → 05 (RR → single → double → Swiss)
 - Track B can start immediately on pure functions in `backend/app/domain/` with unit tests while A builds the foundation.
 
+## Two backend people in one folder — no-conflict rules
+| File / folder | Owner |
+|---|---|
+| `docker-compose.yml`, `Dockerfile`, `requirements.txt`, `app/main.py`, `config.py`, `db.py`, `errors.py`, `signing.py`, `middleware.py`, `auth.py`, `policy.py`, `seed.py`, `queue.py`, `realtime.py`, `models_platform.py` | **Track A** |
+| `app/domain/*`, `services/sports.py`, `services/events.py`, `services/leagues.py`, `routes/audit_sports.py`, `audit_fixtures.py`, `audit_leagues.py`, `audit_events.py`, `audit_standings.py`, `models_league.py` (sports, leagues, matches, match_events) | **Track B** |
+| `app/models.py` | just `from .models_platform import *` + `from .models_league import *` |
+| `app/main.py` router list | Track A adds Track B's routers when B says "router X ready" (one line each) |
+| `requirements.txt` | B asks A in chat to add a package |
+- Track B starts **immediately** with pure functions in `domain/` + unit tests (no DB needed), and only needs A's foundation (`errors.py`, `signing.py`, `db.py`) after ~11:45.
+- `seed.py` (A) needs the 4 sport configs → B posts them as a Python dict in `domain/seed_sports.py` (B owns) and A imports it.
+- Both: `git pull --rebase` before every push; commit small and often.
+
 ## Timeline (Day 1)
 | Time | Target |
 |---|---|

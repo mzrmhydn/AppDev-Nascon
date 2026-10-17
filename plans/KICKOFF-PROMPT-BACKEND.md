@@ -5,11 +5,11 @@ You are my backend pair-programmer for the NaSCon'26 App Dev competition (Part I
 
 Read, in order: CLAUDE.md, contracts/API.md, plans/00-OVERVIEW.md, plans/FRONTEND-CONTRACT-GUARD.md, then the binding spec docs/NaSCon26-AppDev-Part1-spec.pdf (all of it — field names, status codes and error codes are compared literally by the grader). Competition rules: docs/NaSCon26-Rules-Booklet.pdf.
 
-Work only in backend/, tests/, docker-compose.yml, .env.example, run_tests.sh, COVERAGE.json. Follow the fixed structure and pre-made decisions in plans/00-OVERVIEW.md. Implement plans in the order given there (my track: <A or B>), one plan file at a time, starting with plans/01-foundation.md. Never hard-code sport or event names in domain logic.
+Work only in backend/, tests/, docker-compose.yml, .env.example, run_tests.sh, COVERAGE.json. Follow the fixed structure and pre-made decisions in plans/00-OVERVIEW.md. Implement plans in the order given there (my track: <A or B>), one plan file at a time — Track A starts with plans/01-foundation.md, Track B starts with the pure functions of plans/03 (domain/sport_config.py, domain/scoring.py) + unit tests. Respect the file-ownership table in plans/00-OVERVIEW.md ("Two backend people") — never edit the other track's files; ask in chat instead. Never hard-code sport or event names in domain logic.
 
 After each task:
 1. Prove it works (curl or pytest output).
-2. Check every route the mobile app uses against contracts/API.md; if anything differs, stop and print the "⚠ CONTRACT DEVIATION — tell Talha" block from the guard file.
+2. Check every route the mobile app uses against contracts/API.md; if anything differs, stop and print the "⚠ CONTRACT DEVIATION — tell the frontend dev" block from the guard file.
 3. Append every decision to notes/DECISIONS-BE.md (decision, why, alternatives rejected and why, how it works, how to change it, edge cases/complexity, likely viva question, ADR candidate) and keep notes/WALKTHROUGH-BE.md current, as defined in CLAUDE.md §5.
 4. Give me a 3-line summary and remind me to commit + push if 40 minutes have passed (push windows: 11:45, 12:45, 13:45, 14:45).
 

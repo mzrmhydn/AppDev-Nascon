@@ -1,6 +1,6 @@
 # 09 — App API, demo data, realtime (Track A, after 02) — contract §2, spec §8
 
-The mobile app (Talha) is built **right now** against `contracts/API.md` §2. Implement those routes with **exactly** those shapes. If you can't, follow `plans/FRONTEND-CONTRACT-GUARD.md`.
+The mobile app (frontend dev) is built **right now** against `contracts/API.md` §2. Implement those routes with **exactly** those shapes. If you can't, follow `plans/FRONTEND-CONTRACT-GUARD.md`.
 
 ## A. Routes (`routes/api_app.py`, `routes/api_writes.py`) — all thin
 - Every `/api/v1` route except login/ping/demo-seed uses `current_user` (plan 02) and filters by `user.tenant_id` (super_admin: no filter). Cross-tenant id → 403 `FORBIDDEN`; unknown id → 404.
@@ -28,7 +28,7 @@ Idempotent (skip rows that exist). All ids prefixed `demo-` except the seeded ba
 - `ConnectionManager`: `dict[match_id, set[WebSocket]]`, `connect`, `disconnect`, `broadcast(match_id, message)`.
 - Services run in threadpool threads → broadcast from sync code with `anyio.from_thread.run(manager.broadcast, …)` or keep a reference to the event loop at startup and use `asyncio.run_coroutine_threadsafe`. Wrap in try/except — **a broadcast failure must never fail the request**.
 - `/ws/matches/{match_id}`: accept, keep open, ignore incoming messages.
-- If this gets hard, skip it: the app also polls every 5 s. Tell Talha (guard file) if you drop it.
+- If this gets hard, skip it: the app also polls every 5 s. Tell the frontend dev (guard file) if you drop it.
 
 ## Done when
 Log in as each demo user in `/docs` → every contract §2 route returns the documented shape; WebSocket message arrives after posting an event.

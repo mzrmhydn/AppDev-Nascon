@@ -34,7 +34,7 @@ cat COVERAGE.json
 Run instructions (`DAY1_SALT=… docker compose up -d --build`, `./run_tests.sh`), the 5 demo accounts table (spec §8.3), how to point the app at the laptop's LAN IP, where the APK is.
 
 ## TRACEABILITY.md (required)
-Table: `ID | Requirement | Source files | Tests | Status` for FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-2.1, FR-2.2, FR-2.3, FR-5.1, NFR-3, NFR-4, NFR-5, NFR-7. Update when a feature lands. Talha fills the mobile rows.
+Table: `ID | Requirement | Source files | Tests | Status` for FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-2.1, FR-2.2, FR-2.3, FR-5.1, NFR-3, NFR-4, NFR-5, NFR-7. Update when a feature lands. The frontend dev fills the mobile rows.
 
 ## ADR.md (needed for the Day 2 viva — 8 short ADRs)
 Promote from `notes/DECISIONS-*.md`: FastAPI; Postgres + row locks for NFR-3; event sourcing + compensation; policy-as-data RBAC; pure-function domain layer; Redis Streams queue; fpdf2; offline-sync conflict policy (server_wins / rebase).

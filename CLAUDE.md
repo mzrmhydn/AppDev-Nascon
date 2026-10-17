@@ -15,7 +15,7 @@
 | Folder | Owner |
 |---|---|
 | `backend/`, `tests/`, `run_tests.sh`, `COVERAGE.json`, `docker-compose.yml`, `.env.example` | Backend team |
-| `mobile/` (incl. `mobile/release/app-release.apk`) | Talha (frontend) |
+| `mobile/` (incl. `mobile/release/app-release.apk`) | the frontend dev |
 | `contracts/API.md` | Shared — changes only via `plans/FRONTEND-CONTRACT-GUARD.md` |
 | `README.md`, `TRACEABILITY.md`, `ADR.md`, `plans/`, `docs/` | Whoever is free; small edits, pull first |
 
@@ -39,7 +39,7 @@ Agents work **only** inside their human's folders. Need something elsewhere → 
 
 ## 4. Contract guard (frontend ↔ backend)
 Before finishing any task that touches an endpoint used by the app (anything in `contracts/API.md` §1), the agent compares its response with the contract. If they differ, or a field must change, the agent **stops and tells its human**:
-> "⚠ CONTRACT DEVIATION — tell Talha: `<route>` now returns/needs `<X>` instead of `<Y>` because `<reason>`."
+> "⚠ CONTRACT DEVIATION — tell the frontend dev: `<route>` now returns/needs `<X>` instead of `<Y>` because `<reason>`."
 Details: `plans/FRONTEND-CONTRACT-GUARD.md`.
 
 ## 5. Explain every decision (private notes, gitignored)

@@ -1,6 +1,6 @@
 # Frontend ↔ Backend contract guard
 
-**Why:** the mobile app (Talha) and the backend are built at the same time by different people and different AI agents. The app is coded against `contracts/API.md`. Any silent difference = a broken screen in front of the judges (10 UI/HCI points + 4 offline points).
+**Why:** the mobile app (frontend dev) and the backend are built at the same time by different people and different AI agents. The app is coded against `contracts/API.md`. Any silent difference = a broken screen in front of the judges (10 UI/HCI points + 4 offline points).
 
 ## What the frontend assumes (backend agents: treat this as a checklist)
 1. **Base URL** `http://<LAN-IP>:8080`, editable in the app's Settings. Backend binds `0.0.0.0:8080`.
@@ -21,17 +21,17 @@ Before you finish any task touching a route listed in `contracts/API.md` §1:
 2. If anything differs — or you believe the contract should change — **do not quietly "fix" the frontend's expectation**. Stop and print to your human:
 
 ```
-⚠ CONTRACT DEVIATION — please tell Talha (frontend) before continuing:
+⚠ CONTRACT DEVIATION — please tell the frontend dev before continuing:
 Route:    GET /api/v1/clubs/{club_id}
 Contract: roster[].registration_type ∈ initial|transfer|loan
 Backend:  roster[].registration_type ∈ initial|transfer|loan|loan_return
 Reason:   loan returns create a new registration type
 Proposal: map loan_return → "transfer" in the response (no app change)  OR  app adds a label for it
 ```
-3. Prefer the option that needs **no frontend change**. If the app must change, the human tells Talha in chat; once agreed, update `contracts/API.md` and add a CHANGELOG line with the time.
+3. Prefer the option that needs **no frontend change**. If the app must change, the human tells the frontend dev in chat; once agreed, update `contracts/API.md` and add a CHANGELOG line with the time.
 4. Removing/dropping a feature the app uses (e.g. WebSocket) also counts — report it.
 
-## Rule for the frontend agent (Talha's side)
+## Rule for the frontend agent (frontend side)
 Same in reverse: if the app needs a field/route not in the contract, print `⚠ CONTRACT REQUEST — tell the backend: …`, and don't invent backend behaviour.
 
 ## Quick sync ritual (each push window)
