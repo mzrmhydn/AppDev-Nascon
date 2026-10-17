@@ -22,7 +22,8 @@ The **`CHECK (stock >= 0)`** is a second safety net: even a bug can't make stock
 5. **Mock gateway** (`services/payment_gateway.py`, pure-ish): `authorize(token)` → `tok_declined` fails; `capture(auth)` → `tok_capture_fail` fails; else ids `auth_<n>`, `cap_<n>` (n = DB sequence or counter).
    - Declined → transaction 2: `stock += q, reserved -= q`; order `cancelled` → 402 `PAYMENT_DECLINED`.
    - Capture failed → void auth, release the same way → 402 `PAYMENT_CAPTURE_FAILED`.
-   - Store the failed response too for idempotent replay.
+   - Store the failed (402) response too; replaying the identical request returns the **same stored status + body** (log this decision — spec §5.2 only defines replay of successes).
+   - `OUT_OF_STOCK` rolls back everything incl. the order row → nothing stored; a replay simply runs again.
 6. **Success** → transaction 2: `reserved -= q` (stock stays decreased), order `paid`, build response, emit domain event `order.paid` to Redis Stream (`queue.py`, wrap in try/except so Redis down never fails checkout).
 7. Totals: `unit_price_minor` = current price; `subtotal` = Σ; `discount_minor = subtotal * 10 // 100` for WELCOME10 else 0; `total = subtotal − discount`; `paid_at` = server time `YYYY-MM-DDTHH:MM:SSZ`.
 8. Receipt: `payload` exactly as spec (key set: order_id, customer_id, items[], subtotal_minor, discount_minor, total_minor, currency, paid_at). `signature = sign(order_id, payload)`. `pdf_base64` = base64 of `domain/receipt_pdf.py` output.

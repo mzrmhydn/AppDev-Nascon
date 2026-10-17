@@ -1,0 +1,5 @@
+# Shell scripts and Docker files must keep LF line endings, or bash on the Ubuntu grader fails ("bad interpreter: /bin/bash^M").
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.py text eol=lf

@@ -45,6 +45,13 @@ Each area: `S = 0.9·P·(passed/total vectors) + 0.1·P·[coverage ≥ 85 %]`. *
 | 15:15 | Judges at desk: backend running on laptop, app installed, phone on hotspot |
 | before 13:00 | Any spec question → organisers **in writing** |
 
+## Requirements NOT graded by script (do last, minimal, but map them in TRACEABILITY.md)
+TRACEABILITY must map **every** FR/NFR ID. These parts of the FRs have no `/audit` endpoint; give each a small, honest implementation or mark "partial" — judges/viva may ask:
+- FR-1.2 multi-division, promotion/relegation, knockout/hybrid formats per season → store as league config JSON (`format`, `divisions`, `promotion_spots`); hybrid = RR groups + `single_elim` seeding from group standings (reuse plans 04/05).
+- FR-1.3 manual rescheduling + conflict detection (venue double-booking, team/player overlap, min rest, venue windows) and the 6-state match status machine (upcoming, in_progress, completed, postponed, abandoned, cancelled) → one pure `domain/schedule_conflicts.py` returning `{"conflicts":[{"type","entity_ids"}]}` + a transition dict; broadcast status changes on the WebSocket.
+- FR-2.3 scheduled price changes, order states Packed/Shipped/Delivered/Refunded with domain events, product pinning → plan 06 §order state machine, plan 09 showcase.
+- FR-2.1 white-label tenant (logo, colors, name) → tenants table + login response (contract §2.1).
+
 ## Fixed structure (don't improvise — the app and other plans assume it)
 ```
 docker-compose.yml          api (build ./backend, port 8080:8080) + db (postgres:16-alpine) + redis (redis:7-alpine, queue)

@@ -19,6 +19,8 @@ Goal for the 11:45 push: `DAY1_SALT=x docker compose up -d --build` → `GET loc
    - `clubs(club_id PK, tenant_id, name, short_name, primary_color, profile JSONB)` (venue, socials, staff, stats)
    - roster tables → plan 07; store tables → plan 06; `idempotency(scope, key, request_hash, status_code, response JSONB, PK(scope,key))`; `offline_actions(device_id, action_id, result JSONB, PK)`; `showcase(match_id PK, product_id, pinned_at)`
    - Startup: `Base.metadata.create_all()` then `reset_baseline(42, defaults)` + `seed_demo()` if not seeded.
+4b. **Request models:** Pydantic `model_config = ConfigDict(extra="ignore", strict=True)` — spec §5.2: unknown fields are **ignored**, missing fields / wrong types → 400. Ids: 1–64 chars from `A-Za-z0-9_.:-` (never `|`), stored and returned verbatim.
+4c. **Compose extras (P2, after 13:45 if time):** spec §1.3 says compose brings up "database, cache, queue, object store, workers". Redis already = cache + queue. Cheap extras: a `worker` service (same image, `command: python -m app.worker`) that reads the `domain-events` Redis Stream and logs each event; and `minio` (`minio/minio:RELEASE.2024-09-22T00-33-43Z`, `server /data`) for receipt PDFs. Neither must be on the critical path: the API must stay healthy even if they fail. Keep total RAM well under the grader's 8 GB.
 5. **errors.py**
    - `class AppError(Exception): status, code, message, details={}`.
    - Handler → `{"error":{"code","message","details"}}`.

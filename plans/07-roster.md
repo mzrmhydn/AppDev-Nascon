@@ -36,7 +36,7 @@ Effects:
 
 ## `GET /audit/v1/roster/history/{player_id}?as_of=YYYY-MM-DD`
 - 404 `PLAYER_NOT_FOUND`. `as_of` default = today (server date).
-- **Lazy loan return:** if the player has a loan with `loan_end_date < as_of` and no `loan_return` entry for it yet → append one now (`action:"loan_return"`, who `"system"`, effective_date = loan_end_date + 1 day, from = borrower, to = lender, state active) and give the player a new registration back at the lender, role substitute. Written **once** (check before inserting; lock the player).
+- **Lazy loan return:** if the player has a loan with `loan_end_date < as_of` and no `loan_return` entry for it yet → append one now (`action:"loan_return"`, who `"system"`, effective_date = loan_end_date + 1 day, from = borrower, to = lender, state active) and give the player a new registration back at the lender, role substitute, `registration_type: "transfer"` (keeps the contract's enum `initial|transfer|loan` for `GET /api/v1/clubs/{id}`). Written **once** (check before inserting; lock the player).
 - `current_squad_id` / `parent_squad_id` for that date; null if released. `history` oldest-first.
 - Note: `base_version` for offline sync = number of audit entries of the player.
 
