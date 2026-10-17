@@ -54,4 +54,5 @@ Keep `notes/WALKTHROUGH-<BE|FE|LEAD>.md` current: file map, request flow per fea
 ## 6. Git
 - Everyone on `main`. `git pull --rebase` before every push. Small commits: `[BE] FR-2.3 checkout`, `[FE] standings screen`.
 - **Never** `--force`, never rewrite pushed commits.
+- **No co-authors.** Never add `Co-Authored-By:` (or any AI attribution / "Generated with" line) to commit messages or PRs. Each clone runs once: `git config core.hooksPath .githooks` (the hook strips such lines automatically). `.claude/settings.json` also turns off Claude Code's attribution.
 - Remind your human to push if 40+ min have passed.
