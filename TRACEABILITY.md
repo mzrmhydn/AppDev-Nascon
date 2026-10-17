@@ -1,16 +1,18 @@
 # Traceability matrix
 
+Paths are relative to `backend/app/` unless they start with `mobile/` or `tests/`.
+
 | ID | Requirement | Source files | Automated tests | Status |
 |---|---|---|---|---|
-| FR-1.1 | Multi-sport taxonomy, mystery sport, event-sourced scoring | backend/app/domain/sport_config.py, domain/scoring.py, services/events.py | tests/backend/test_scoring.py | todo |
-| FR-1.2 | League & tournament setup | backend/app/services/leagues.py | tests/backend/test_standings.py | todo |
-| FR-1.3 | Fixture scheduling (RR, Swiss, single, double elim) | backend/app/domain/fixtures_*.py | tests/backend/test_fixtures_*.py | todo |
-| FR-1.4 | Standings, tie-breakers, qualification | backend/app/domain/standings.py | tests/backend/test_standings.py | todo |
-| FR-2.1 | Club profiles, tenant isolation | backend/app/routes/api_app.py; mobile/app/club | tests/backend/test_rbac.py | todo |
-| FR-2.2 | Roster, transfers, loans, audit trail | backend/app/domain/roster_rules.py, services/roster.py | tests/backend/test_roster.py | todo |
-| FR-2.3 | Merchandise store, checkout, PDF receipt | backend/app/services/store.py, domain/receipt_pdf.py; mobile/app/store | tests/backend/test_store.py | todo |
-| FR-5.1 | 5-tier RBAC | backend/app/policy.py, auth.py, routes/audit_rbac.py | tests/backend/test_rbac.py | todo |
-| NFR-3 | Concurrency correctness | backend/app/services/store.py | tests/backend/test_store.py (20-thread burst) | todo |
-| NFR-4 | Offline tolerance | backend/app/services/offline_sync.py; mobile/src/offline/* | tests/backend/test_offline_sync.py | todo |
-| NFR-5 | Security (JWT, rate limit, validation, secure storage) | backend/app/middleware.py, auth.py; mobile/src/auth* | tests/backend/test_rbac.py | todo |
-| NFR-7 | Reproducibility | docker-compose.yml, backend/Dockerfile | run_tests.sh | todo |
+| FR-1.1 | Multi-sport taxonomy from JSON (mystery sport), event-sourced scoring with compensation, signed events | domain/sport_config.py, domain/seed_sports.py, domain/scoring.py, services/sports.py, services/events.py, routes/audit_sports.py, routes/audit_events.py, models_league.py | tests/backend/test_sport_config.py, test_scoring.py, test_leagues_api.py (mystery sport end-to-end), test_signing.py | done |
+| FR-1.2 | League & tournament setup (formats, divisions, promotion/relegation, hybrid) | services/leagues.py, routes/audit_leagues.py, models_league.py (League) | tests/backend/test_leagues_api.py | partial — single-division leagues with points/tie-break/qualification config; multi-division + promotion/relegation not implemented |
+| FR-1.3 | Fixture generation (round robin + withdrawals, Swiss, single + double elimination), match status | domain/fixtures_common.py, fixtures_round_robin.py, fixtures_single_elim.py, fixtures_double_elim.py, fixtures_swiss.py, routes/audit_fixtures.py | tests/backend/test_fixtures_round_robin.py, test_fixtures_single_elim.py, test_fixtures_double_elim.py, test_fixtures_swiss.py | done (generation); manual rescheduling / venue conflict detection not implemented |
+| FR-1.4 | Standings, H2H mini-league tie-breaks, draw lots, clinched/eliminated | domain/standings.py, services/leagues.py, routes/audit_standings.py | tests/backend/test_standings.py, test_leagues_api.py | done |
+| FR-2.1 | Club profiles, white-label tenant, tenant isolation | models_platform.py (Tenant, Club), routes/api_app.py, routes/api_auth.py (tenant branding on login), demo_seed.py; mobile/ | tests/backend/test_app_api.py (tenant 403s), test_rbac.py | done (backend) |
+| FR-2.2 | Roster, transfers, loans with automatic return, release, windows, squad limits, audit trail | domain/roster_rules.py, services/roster.py, routes/audit_roster.py, models_platform.py (roster tables) | tests/backend/test_roster.py | done |
+| FR-2.3 | Store: variants, discount, mock gateway, order states + domain events, PDF receipt, showcase pinning | services/store.py, services/payment_gateway.py, domain/receipt_pdf.py, queue.py, routes/audit_store.py, routes/api_app.py (products, showcase), realtime.py | tests/backend/test_store.py, test_app_api.py | done (order transitions after `paid` exist as a state table, no route) |
+| FR-5.1 | Five-tier RBAC as a policy matrix + negative authorization tests | policy.py, auth.py, routes/audit_rbac.py; every /api/v1 route | tests/backend/test_rbac.py (full §5.13 matrix, 85 checks), test_app_api.py, test_roster.py, test_offline_sync.py | done |
+| NFR-3 | Concurrency: 20 buyers, 1 unit → 1 order, no negative stock | services/store.py (conditional UPDATE, sorted order), models_platform.py (CHECK stock >= 0), db.py (pool 20+10) | tests/backend/test_store.py::test_twenty_buyers_exactly_one_wins | done |
+| NFR-4 | Offline tolerance: queued actions sync with conflict handling | services/offline_sync.py, routes/audit_offline.py; mobile/ (local queue) | tests/backend/test_offline_sync.py | done (backend) |
+| NFR-5 | Security: JWT (alg pinned), rate limiting, input validation, body limit, RBAC | auth.py, middleware.py (413 + sliding-window limiter), errors.py, policy.py; mobile/ (secure token storage) | tests/backend/test_rbac.py (alg:none, tampered, expired, rate limit, injection-like ids), test_store.py (script tags as data) | done (backend) |
+| NFR-7 | Reproducibility: one command brings up + seeds the stack | docker-compose.yml, backend/Dockerfile, backend/requirements.txt (pinned), main.py (create tables + seed), seed.py, routes/health.py, routes/audit_reset.py | run_tests.sh, tests/backend/test_rbac.py (reset + health) | done |

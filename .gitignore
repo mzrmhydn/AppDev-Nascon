@@ -23,6 +23,8 @@ venv/
 .pytest_cache/
 .coverage
 coverage.json
+# the submission file COVERAGE.json must stay tracked (Windows git ignores case)
+!/COVERAGE.json
 htmlcov/
 
 # --- Node / Expo / Android ---
